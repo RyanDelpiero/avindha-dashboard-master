@@ -5,25 +5,25 @@ const db = require('./db');
 
 const app = express();
 
-// Middleware: Mengatur batas payload 50MB agar sanggup menerima Base64 evidence gambar/video
 app.use(cors());
 app.use(express.json({ limit: '50mb' }));
 app.use(express.urlencoded({ limit: '50mb', extended: true }));
 
 // --- REST API ENDPOINTS ---
 
-// 1. GET: Ambil seluruh data berdasarkan modul ('ivr', 'grapari-indihome', 'grapari-mobile')
+// 1. GET: Ambil seluruh data berdasarkan modul
 app.get('/api/testcases/:module', async (req, res) => {
     try {
-        const [rows] = await db.query(
-            `SELECT * FROM test_cases WHERE module = ? ORDER BY id DESC`,
+        // Menggunakan $1 dan destructuring { rows } khas package pg
+        const { rows } = await db.query(
+            `SELECT * FROM test_cases WHERE module = $1 ORDER BY id DESC`,
             [req.params.module]
         );
 
         const formatted = rows.map(item => ({
             id: item.id,
             module: item.module,
-            date: item.date ? item.date.toISOString().split('T')[0] : '',
+            date: item.date ? (typeof item.date === 'string' ? item.date : item.date.toISOString().split('T')[0]) : '',
             result: item.result,
             severity: item.severity,
             serviceProvider: item.service_provider,
@@ -56,10 +56,12 @@ app.post('/api/testcases', async (req, res) => {
         const body = req.body;
         const evidence = body.evidence || {};
 
+        // Ubah ? menjadi $1, $2, ... $17 dan tambahkan RETURNING id
         const sql = `
             INSERT INTO test_cases 
             (module, date, result, severity, service_provider, phone, layanan, tier, menu_category, capability, step, detail, description, propose, evidence_type, evidence_name, evidence_data)
-            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+            VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17)
+            RETURNING id;
         `;
 
         const values = [
@@ -82,8 +84,8 @@ app.post('/api/testcases', async (req, res) => {
             evidence.data || null
         ];
 
-        const [result] = await db.query(sql, values);
-        res.status(201).json({ message: 'Data berhasil disimpan!', insertId: result.insertId });
+        const { rows } = await db.query(sql, values);
+        res.status(201).json({ message: 'Data berhasil disimpan!', insertId: rows[0].id });
     } catch (err) {
         res.status(400).json({ error: err.message });
     }
@@ -97,10 +99,10 @@ app.put('/api/testcases/:id', async (req, res) => {
 
         const sql = `
             UPDATE test_cases SET
-            date = ?, result = ?, severity = ?, service_provider = ?, phone = ?, 
-            layanan = ?, tier = ?, menu_category = ?, capability = ?, step = ?, 
-            detail = ?, description = ?, propose = ?, evidence_type = ?, evidence_name = ?, evidence_data = ?
-            WHERE id = ?
+            date = $1, result = $2, severity = $3, service_provider = $4, phone = $5, 
+            layanan = $6, tier = $7, menu_category = $8, capability = $9, step = $10, 
+            detail = $11, description = $12, propose = $13, evidence_type = $14, evidence_name = $15, evidence_data = $16
+            WHERE id = $17
         `;
 
         const values = [
@@ -130,15 +132,20 @@ app.put('/api/testcases/:id', async (req, res) => {
     }
 });
 
-// 4. DELETE: Hapus Seluruh Data Modul (Clear All)
+// 4. DELETE: Hapus Seluruh Data Modul
 app.delete('/api/testcases/module/:module', async (req, res) => {
     try {
-        await db.query(`DELETE FROM test_cases WHERE module = ?`, [req.params.module]);
+        await db.query(`DELETE FROM test_cases WHERE module = $1`, [req.params.module]);
         res.json({ message: `Seluruh data modul ${req.params.module} berhasil dihapus!` });
     } catch (err) {
         res.status(500).json({ error: err.message });
     }
 });
 
+// Khusus untuk deployment Vercel (Export handler express)
+module.exports = app;
+
 const PORT = process.env.PORT || 5000;
-app.listen(PORT, () => console.log(`🚀 AVINDHA SQL API Server berjalan di http://localhost:${PORT}`));
+if (process.env.NODE_ENV !== 'production') {
+    app.listen(PORT, () => console.log(`🚀 AVINDHA SQL API Server berjalan di http://localhost:${PORT}`));
+}
