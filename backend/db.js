@@ -1,24 +1,26 @@
 // db.js
-const { Pool } = require('pg');
+const mysql = require('mysql2/promise');
 require('dotenv').config();
 
-const pool = new Pool({
-    connectionString: process.env.DATABASE_URL,
-    ssl: {
-        rejectUnauthorized: false // Wajib untuk koneksi SSL Supabase di Vercel
-    }
+const pool = mysql.createPool({
+    host: process.env.DB_HOST || 'localhost',
+    user: process.env.DB_USER || 'root',
+    password: process.env.DB_PASSWORD || '',
+    database: process.env.DB_NAME || 'avindha_db',
+    waitForConnections: true,
+    connectionLimit: 10,
+    queueLimit: 0
 });
 
-pool.connect()
-    .then(client => {
-        console.log('✅ Terhubung ke Database PostgreSQL Supabase');
-        client.release();
-    })
-    .catch(err => {
-        console.error('❌ Gagal terkoneksi ke Supabase:', err.message);
-    });
+// Tes Koneksi Database
+(async () => {
+    try {
+        const connection = await pool.getConnection();
+        console.log('✅ Terhubung ke Database MySQL');
+        connection.release();
+    } catch (err) {
+        console.error('❌ Gagal terkoneksi ke Database MySQL:', err.message);
+    }
+})();
 
-module.exports = {
-    // Wrapper query agar kompatibel dengan pemanggilan db.query()
-    query: (text, params) => pool.query(text, params)
-};
+module.exports = pool;

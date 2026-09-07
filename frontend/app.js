@@ -59,7 +59,7 @@ function showDashboardScreen() {
     }
 
     switchMainMenu('ivr');
-    safeCreateIcons();
+    safeCreateIcons(); // <-- Pastikan baris ini ada di sini
 }
 
 // --- DATA & CONFIGURATION ---
