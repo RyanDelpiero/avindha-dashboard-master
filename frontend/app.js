@@ -1,7 +1,8 @@
 // --- KONFIGURASI BACKEND API ---
 // const API_BASE_URL = 'http://localhost:5000/api/testcases';
-
-const API_BASE_URL = 'https://avindha-dashboard-master.vercel.app';
+// const API_BASE_URL = 'https://avindha-dashboard-master.vercel.app';
+// --- KONFIGURASI BACKEND API ---
+const API_BASE_URL = 'https://avindha-dashboard-master.vercel.app/api/testcases';
 
 // --- AUTHENTICATION MODULE ---
 const REGISTERED_USERS = {
